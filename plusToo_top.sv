@@ -86,6 +86,34 @@ module plusToo_top(
 `ifdef USE_AUDIO_IN
 	input         AUDIO_IN,
 `endif
+`ifdef USE_EXTBUS	
+	output [23:0]  BUS_A = 24'b0,
+	inout  [15:0]  BUS_D = 16'b0,
+	inout          USER1,
+	inout          USER2,
+	inout          USER3,
+	inout          USER5,
+	inout          USER6,
+	inout          USER7,
+	inout          N41,
+	inout          N42,
+	inout          N43,
+	inout          N44,
+	inout          N45,
+	inout          N46,
+	inout          N47,
+	inout          N48,
+	output         BUS_nRESET,
+	output         BUS_nM1,
+	output         BUS_nMREQ,
+	output         BUS_nIORQ,
+	output         BUS_nRD,
+	output         BUS_nWR,
+	output         BUS_nRFSH,
+	output         BUS_nHALT,
+	output         BUS_nBUSAK,
+	output reg     BUS_CLK,
+`endif
 	input         UART_RX,
 	output        UART_TX
 
@@ -152,6 +180,8 @@ assign SDRAM2_nWE = 1;
 assign LED = ~(dio_download || dio_upload || |(diskAct ^ diskMotor));
 
 localparam SCSI_DEVS = 4;
+
+
 // ------------------------------ Plus Too Bus Timing ---------------------------------
 // for stability and maintainability reasons the whole timing has been simplyfied:
 //                00           01             10           11
@@ -161,6 +191,7 @@ localparam SCSI_DEVS = 4;
 //                        |      |    |                      |    |
 //                      video    | CPU|                      | CPU|
 //                       read   write read                  write read
+
 
 // -------------------------------------------------------------------------
 // ------------------------------ data_io ----------------------------------
@@ -257,25 +288,33 @@ wire [3:0] key = 4'd0;
 	wire clk32;
 
 	pll cs0(
-		.inclk0	( CLOCK_27),
-		.c0		( clk64			),
+	`ifdef CLOCK_IN_50
+		.inclk0	( CLOCK_50		),
+	`else
+		.inclk0	( CLOCK_27		),
+	`endif
+		.c0     ( clk64			),
 		.c1     ( clk32         ),
 		.locked	( pll_locked	)
 	);
 
-	assign SDRAM_CLK = clk64;
+	`ifdef INVERT_SDRAM_CLOCK
+		assign SDRAM_CLK = ~clk64;
+	`else
+		assign SDRAM_CLK = clk64;
+	`endif
 	// the configuration string is returned to the io controller to allow
 	// it to control the menu on the OSD
 
 	parameter CONF_STR = {
 		"PLUS_TOO;;",
-		"F1,DSK;",
-		"F2,DSK;",
+		"F1U,DSK;",
+		"F2U,DSK;",
 		`SEP
-		"S0,IMGVHDHD?,Mount SCSI6;",
-		"S1,IMGVHDHD?,Mount SCSI5;",
-		"S2,IMGVHDHD?,Mount SCSI4;",
-		"S3,IMGVHDHD?,Mount SCSI3;",
+		"S0U,IMGVHDHD?,Mount SCSI6;",
+		"S1U,IMGVHDHD?,Mount SCSI5;",
+		"S2U,IMGVHDHD?,Mount SCSI4;",
+		"S3U,IMGVHDHD?,Mount SCSI3;",
 		`SEP
 		"O4,Memory,1MB,4MB;",
 		"O5,Speed,8MHz,16MHz;",
